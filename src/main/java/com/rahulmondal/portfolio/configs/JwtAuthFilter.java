@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class JwtAuthFilter extends OncePerRequestFilter{
+public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final CustomUserDetailsService userDetailsService;
     private final AuthUtils authUtils;
@@ -29,28 +29,34 @@ public class JwtAuthFilter extends OncePerRequestFilter{
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-              
-            try{
+
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            response.setStatus(HttpServletResponse.SC_OK);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        try {
             final String reqHeader = request.getHeader("Authorization");
-            if(reqHeader == null || !reqHeader.startsWith("Bearer")){
+            if (reqHeader == null || !reqHeader.startsWith("Bearer")) {
                 filterChain.doFilter(request, response);
                 return;
-            } 
+            }
 
             String token = reqHeader.split("Bearer ")[1];
             String username = authUtils.extractUsername(token);
-            
-            if(username != null && SecurityContextHolder.getContext().getAuthentication() == null ){
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 CustomUserDetails user = userDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken token2 = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                UsernamePasswordAuthenticationToken token2 = new UsernamePasswordAuthenticationToken(user, null,
+                        user.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(token2);
             }
             filterChain.doFilter(request, response);
-            }
-            catch(Exception exception){
-                handlerExceptionResolver.resolveException(request, response, null, exception);
-            }
-           
+        } catch (Exception exception) {
+            handlerExceptionResolver.resolveException(request, response, null, exception);
+        }
+
     }
 
 }
